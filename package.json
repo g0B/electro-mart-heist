@@ -1,0 +1,16 @@
+{
+  "name": "electro-mart",
+  "version": "1.0.0",
+  "description": "N64-style multiplayer shopping cart chaos in an electronics store (Three.js + cannon-es + ws)",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Electro Mart Heist</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<style>
+  :root { --yellow: #ffe36a; --red: #c0202a; --blue: #2a3fa0; --ink: #14121c; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--ink); overflow: hidden; font-family: 'Arial Black', Impact, 'Trebuchet MS', sans-serif; color: #f2eee0; }
+  canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; image-rendering: pixelated; image-rendering: crisp-edges; }
+  .scan { position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0 1px, transparent 1px 3px); mix-blend-mode: multiply; }
+
+  /* ---------- character select ---------- */
+  #select { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 16px; gap: 10px; pointer-events: none; }
+  #select h1 { margin: 0; font-size: clamp(28px, 6vw, 64px); color: var(--yellow); text-shadow: 4px 4px 0 var(--red), 8px 8px 0 #000; letter-spacing: 2px; pointer-events: auto; }
+  #select .sub { margin: 0 0 auto; font-size: 14px; color: #ddd; text-shadow: 2px 2px 0 #000; }
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(150px, 210px)); gap: 10px; pointer-events: auto; width: 100%; max-width: 900px; }
+  .card { background: rgba(20,18,28,0.85); border: 3px solid #4a4658; padding: 10px 12px; cursor: pointer; transition: transform .1s; text-align: left; color: inherit; font-family: inherit; }
+  .card:hover { transform: translateY(-3px); border-color: #8a86a0; }
+  .card.on { border-color: var(--yellow); background: rgba(42,63,160,0.75); box-shadow: 0 0 0 3px #000, 0 0 18px var(--yellow); }
+  .card h2 { margin: 0 0 4px; font-size: 22px; color: var(--yellow); letter-spacing: 1px; }
+  .card p { margin: 0 0 6px; font-size: 11px; line-height: 1.35; color: #e8e4d8; text-transform: uppercase; }
+  .card .stats { font-size: 10px; color: #bbb; }
+  .card .stats b { color: #fff; }
+  .join { display: flex; gap: 8px; align-items: center; pointer-events: auto; background: rgba(20,18,28,0.85); padding: 8px 10px; border: 3px solid #4a4658; }
+  .join input { font-family: inherit; font-size: 16px; padding: 6px 8px; width: 170px; background: #0d0c14; color: #fff; border: 2px solid #4a4658; }
+  .join input.srv { width: 230px; font-size: 12px; font-family: monospace; color: #9fd; }
+  .join button { font-family: inherit; font-size: 18px; padding: 8px 18px; background: var(--red); color: #fff; border: 3px solid #ffb0b0; cursor: pointer; text-shadow: 2px 2px 0 #000; }
+  .join button:hover { background: #e03040; }
+  .join button:disabled { opacity: .5; cursor: default; }
+  #selErr { color: #ff8a8a; font-size: 12px; }
+  @media (max-width: 700px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; pointer-events: none; display: none; text-shadow: 2px 2px 0 #000; }
+  .box { background: rgba(10,9,16,0.7); border: 2px solid #4a4658; padding: 6px 10px; }
+  #top { position: absolute; top: 12px; left: 12px; display: flex; gap: 10px; align-items: flex-start; }
+  #me { font-size: 14px; }
+  #me .n { color: var(--yellow); font-size: 18px; }
+  #score { color: #8dff8d; font-size: 22px; }
+  #timer { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); font-size: 26px; color: var(--yellow); }
+  #board { position: absolute; top: 12px; right: 12px; min-width: 190px; font-size: 13px; }
+  #board h3 { margin: 0 0 4px; font-size: 12px; color: #aaa; letter-spacing: 1px; }
+  #board .row { display: flex; justify-content: space-between; gap: 12px; }
+  #board .row.me { color: var(--yellow); }
+  #cart { position: absolute; bottom: 90px; left: 12px; font-size: 13px; min-width: 240px; }
+  #cart .bar { height: 10px; background: #222; border: 1px solid #666; margin-top: 4px; }
+  #cart .bar i { display: block; height: 100%; background: linear-gradient(90deg, #8dff8d, #ffe36a, #ff5a5a); }
+  #hold { position: absolute; bottom: 90px; right: 12px; font-size: 13px; color: #cfe; }
+  #prompt { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); font-size: 16px; display: flex; gap: 18px; white-space: nowrap; }
+  #prompt span { color: #fff; }
+  #prompt b { color: var(--yellow); background: #000; padding: 1px 6px; border: 2px solid var(--yellow); margin-right: 6px; }
+  #feed { position: absolute; bottom: 150px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  #feed div { background: rgba(192,32,42,0.85); border: 2px solid #ffb0b0; padding: 4px 12px; font-size: 14px; animation: pop .25s ease-out; }
+  #feed div.info { background: rgba(42,63,160,0.85); border-color: #a0b0ff; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  #hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #ccc; background: rgba(0,0,0,.5); padding: 4px 10px; }
+  #help { position: absolute; bottom: 12px; left: 12px; font-size: 11px; color: #999; }
+  #over { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); pointer-events: none; }
+  #over .box { min-width: 320px; text-align: center; font-size: 16px; }
+  #over h2 { color: var(--yellow); margin: 0 0 10px; font-size: 32px; text-shadow: 4px 4px 0 var(--red); }
+  #over .row { display: flex; justify-content: space-between; padding: 2px 10px; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="scan"></div>
+
+<div id="select">
+  <h1>ELECTRO MART</h1>
+  <p class="sub">THE HEIST &mdash; PICK YOUR CREW</p>
+  <div class="cards" id="cards"></div>
+  <div class="join">
+    <input id="name" maxlength="14" placeholder="Your name">
+    <input id="server" placeholder="server (blank = this host)" title="Game server address, e.g. wss://electro-mart-heist.onrender.com" class="srv">
+    <button id="joinBtn">ENTER STORE</button>
+    <span id="selErr"></span>
+  </div>
+</div>
+
+<div id="hud">
+  <div id="top">
+    <div class="box" id="me"><div class="n">—</div><div id="score">$0</div></div>
+  </div>
+  <div id="timer" class="box">4:00</div>
+  <div id="board" class="box"><h3>CREW</h3><div id="rows"></div></div>
+  <div id="hint">Click to look around &middot; WASD move &middot; E cart &middot; F loot &middot; Bring carts back to the truck outside!</div>
+  <div id="cart" class="box" style="display:none"></div>
+  <div id="hold" class="box" style="display:none"></div>
+  <div id="feed"></div>
+  <div id="prompt"></div>
+  <div id="help">WASD move &nbsp;|&nbsp; Mouse look &nbsp;|&nbsp; E grab / release cart, stash at truck &nbsp;|&nbsp; F swipe / place loot &nbsp;|&nbsp; Helpers make carts faster, heavy loot makes them slower</div>
+</div>
+<div id="over"><div class="box"><h2>THE COPS ARE HERE!</h2><div id="overRows"></div><p id="overNext"></p></div></div>
+
+<script src="config.js"></script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+} }
+</script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
