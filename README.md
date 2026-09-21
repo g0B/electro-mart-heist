@@ -51,3 +51,18 @@ first load needs internet access.
 - `public/js/store.js` — the store interior, the parking lot and the getaway truck.
 - `public/js/characters.js`, `items.js`, `cart.js`, `physics.js` — everything is built from
   primitives; no external assets.
+
+## Deploy
+
+The game needs a long-lived WebSocket server, which serverless hosts (Vercel) can't run,
+so it deploys in two halves:
+
+1. **Server on Render** (free Node tier, WebSockets supported) — push this folder to a
+   GitHub repo, then in Render choose *New → Blueprint* and pick the repo; `render.yaml`
+   creates the `electro-mart-heist` web service. Its URL alone is a complete, playable
+   game (the server serves the client too).
+2. **Client on Vercel** — `vercel --prod` publishes `public/` as a static site
+   (`vercel.json`). `public/config.js` tells it where the server is
+   (`window.EM_SERVER_URL = 'wss://electro-mart-heist.onrender.com'`); change it if your
+   Render service got a different name and redeploy. Players can also override the server
+   with `?server=wss://host` or the field on the select screen.
