@@ -1,6 +1,17 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "electro-mart", "runtimeExecutable": "node", "runtimeArgs": ["server.js"], "port": 3000 }
+    {
+      "name": "electro-mart-heist",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5220",
+        "--directory",
+        "public"
+      ],
+      "port": 5220
+    }
   ]
 }

@@ -26,7 +26,11 @@
   .card .stats b { color: #fff; }
   .join { display: flex; gap: 8px; align-items: center; pointer-events: auto; background: rgba(20,18,28,0.85); padding: 8px 10px; border: 3px solid #4a4658; }
   .join input { font-family: inherit; font-size: 16px; padding: 6px 8px; width: 170px; background: #0d0c14; color: #fff; border: 2px solid #4a4658; }
-  .join input.srv { width: 230px; font-size: 12px; font-family: monospace; color: #9fd; }
+  .join input.code { width: 120px; text-transform: uppercase; letter-spacing: 2px; }
+  .join { flex-wrap: wrap; justify-content: center; }
+  #room { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); font-size: 13px; pointer-events: auto; }
+  #room b { color: var(--yellow); letter-spacing: 2px; }
+  #room button { font-family: inherit; font-size: 11px; margin-left: 6px; background: var(--blue); color: #fff; border: 2px solid #a0b0ff; cursor: pointer; }
   .join button { font-family: inherit; font-size: 18px; padding: 8px 18px; background: var(--red); color: #fff; border: 3px solid #ffb0b0; cursor: pointer; text-shadow: 2px 2px 0 #000; }
   .join button:hover { background: #e03040; }
   .join button:disabled { opacity: .5; cursor: default; }
@@ -56,7 +60,7 @@
   #feed div { background: rgba(192,32,42,0.85); border: 2px solid #ffb0b0; padding: 4px 12px; font-size: 14px; animation: pop .25s ease-out; }
   #feed div.info { background: rgba(42,63,160,0.85); border-color: #a0b0ff; }
   @keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  #hint { position: absolute; top: 70px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #ccc; background: rgba(0,0,0,.5); padding: 4px 10px; }
+  #hint { position: absolute; top: 100px; left: 50%; transform: translateX(-50%); font-size: 13px; color: #ccc; background: rgba(0,0,0,.5); padding: 4px 10px; }
   #help { position: absolute; bottom: 12px; left: 12px; font-size: 11px; color: #999; }
   #over { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,0.6); pointer-events: none; }
   #over .box { min-width: 320px; text-align: center; font-size: 16px; }
@@ -74,8 +78,10 @@
   <div class="cards" id="cards"></div>
   <div class="join">
     <input id="name" maxlength="14" placeholder="Your name">
-    <input id="server" placeholder="server (blank = this host)" title="Game server address, e.g. wss://electro-mart-heist.onrender.com" class="srv">
-    <button id="joinBtn">ENTER STORE</button>
+    <button id="soloBtn">SOLO</button>
+    <button id="hostBtn">HOST HEIST</button>
+    <input id="code" maxlength="5" placeholder="ROOM CODE" class="code">
+    <button id="joinBtn">JOIN</button>
     <span id="selErr"></span>
   </div>
 </div>
@@ -85,6 +91,7 @@
     <div class="box" id="me"><div class="n">—</div><div id="score">$0</div></div>
   </div>
   <div id="timer" class="box">4:00</div>
+  <div id="room" class="box" style="display:none"></div>
   <div id="board" class="box"><h3>CREW</h3><div id="rows"></div></div>
   <div id="hint">Click to look around &middot; WASD move &middot; E cart &middot; F loot &middot; Bring carts back to the truck outside!</div>
   <div id="cart" class="box" style="display:none"></div>
@@ -95,10 +102,10 @@
 </div>
 <div id="over"><div class="box"><h2>THE COPS ARE HERE!</h2><div id="overRows"></div><p id="overNext"></p></div></div>
 
-<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <script type="importmap">
 { "imports": {
-  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
   "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
 } }
 </script>

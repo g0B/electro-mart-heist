@@ -1,20 +1,17 @@
 # Electro Mart Heist
 
-N64-flavoured multiplayer heist built with Three.js, cannon-es and a tiny WebSocket
-server. Electro Mart is closed for the night and the alarm is off. Pick Spike, Lizzie,
-Bean or Chunk, grab a shopping cart, fill it with electronics and push it out the front
-doors to the getaway truck in the parking lot — before the cops show up in 4 minutes.
+N64-style co-op heist: grab a shopping cart, fill it with electronics and push it out to the getaway truck before the cops arrive in 4 minutes.
 
-## Run
+Pick Spike, Lizzie, Bean or Chunk. Electro Mart is closed for the night and the alarm is off.
 
-```bash
-npm install
-npm start
-```
+## Play
 
-Open http://localhost:3000 in as many browser windows as you like (or share your LAN
-IP with friends on the same network). Three.js / cannon-es load from a CDN, so the
-first load needs internet access.
+- Live: https://electro-mart-heist.vercel.app
+- Local: `npm start` (static server on http://localhost:5220), or start it from the Games Switchboard.
+
+**Solo** plays alone in your browser. **Host heist** opens a room and shows a 4-letter code plus a **Copy invite** link (`?room=CODE`); friends open the link or type the code and press **Join**. Three.js, cannon-es and PeerJS load from a CDN, so you need internet access.
+
+Peer-to-peer caveats: the heist ends if the host closes their tab, and strict NATs or corporate firewalls can block WebRTC.
 
 ## Controls
 
@@ -39,30 +36,16 @@ first load needs internet access.
   lot to the yellow zone behind it. Heists last 4 minutes; then the cops arrive, the
   leaderboard shows and the store resets.
 
-## Architecture
+## How it works
 
-- `server.js` — relay + rules. Players are authoritative for their own movement. The first
-  pusher of a cart becomes its *authority*: they steer it and run the cannon-es simulation
-  of the items in it, streaming transforms to everyone else at 15 Hz. The server owns item
-  lifecycle (shelf → held → cart/loose → stashed), scoring and rounds.
-- `public/js/main.js` — game loop, third-person camera, cart steering/momentum, interactions, HUD.
-- `public/js/n64.js` — the look: 1/3-resolution framebuffer upscaled with nearest filtering,
-  blurry 32px canvas textures, flat Lambert lighting, no shadow maps, fog, scanline overlay.
+- `public/js/sim.js` — the room rules (render-free, runs in the host's browser and in Node for tests). Players are authoritative for their own movement. The first pusher of a cart becomes its *authority*: they steer it and run the cannon-es simulation of the items in it, streaming transforms to everyone else at 15 Hz. The room owns item lifecycle (shelf → held → cart/loose → stashed), scoring and rounds.
+- `public/js/net.js` — PeerJS transport. The host's browser runs `sim.js` ticked from a Web Worker (so alt-tabbing doesn't freeze the game); guests connect by room code. Solo runs the same room locally with no peer.
+- `public/js/main.js` — game loop, third-person camera, cart steering/momentum, interactions, HUD, lobby.
+- `public/js/n64.js` — the look: 1/3-resolution framebuffer upscaled with nearest filtering, blurry 32px canvas textures, flat Lambert lighting, no shadow maps, fog, scanline overlay.
 - `public/js/store.js` — the store interior, the parking lot and the getaway truck.
-- `public/js/characters.js`, `items.js`, `cart.js`, `physics.js` — everything is built from
-  primitives; no external assets.
+- `public/js/characters.js`, `items.js`, `cart.js`, `physics.js` — everything is built from primitives; no external assets.
 
-## Deploy
+## Dev
 
-The game needs a long-lived WebSocket server, which serverless hosts (Vercel) can't run,
-so it deploys in two halves:
-
-1. **Server on Render** (free Node tier, WebSockets supported) — push this folder to a
-   GitHub repo, then in Render choose *New → Blueprint* and pick the repo; `render.yaml`
-   creates the `electro-mart-heist` web service. Its URL alone is a complete, playable
-   game (the server serves the client too).
-2. **Client on Vercel** — `vercel --prod` publishes `public/` as a static site
-   (`vercel.json`). `public/config.js` tells it where the server is
-   (`window.EM_SERVER_URL = 'wss://electro-mart-heist.onrender.com'`); change it if your
-   Render service got a different name and redeploy. Players can also override the server
-   with `?server=wss://host` or the field on the select screen.
+- `npm test` runs the headless room test (`test/sim-test.mjs`): join, grab, swipe, place, stash, score split, authority hand-off and round reset.
+- Static site on Vercel (`vercel.json` serves `public/`, no build step). No game server.

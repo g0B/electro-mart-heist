@@ -7,7 +7,7 @@ import { ITEM_TYPES, MAX_PUSHERS } from './itemdata.js';
 import { buildItemMesh } from './items.js';
 import { CART_RADIUS, HANDLE_DIST, buildCartMesh, CartBody } from './cart.js';
 import { makeWorld, makeItemBody } from './physics.js';
-import { Net, defaultServerUrl, normalizeServerUrl } from './net.js';
+import { Net, makeCode } from './net.js';
 
 const $ = (s) => document.querySelector(s);
 const PLAYER_RADIUS = 0.38;
@@ -56,24 +56,34 @@ for (const [key, c] of Object.entries(CHARACTERS)) {
   cardsEl.appendChild(b);
 }
 const nameEl = $('#name');
-nameEl.value = localStorage.getItem('em_name') || ('Shopper' + Math.floor(Math.random() * 90 + 10));
+let savedName = null; try { savedName = localStorage.getItem('em_name'); } catch {}
+nameEl.value = savedName || ('Shopper' + Math.floor(Math.random() * 90 + 10));
 
-const serverEl = $('#server');
-serverEl.value = defaultServerUrl();
+const codeEl = $('#code');
+codeEl.value = (new URLSearchParams(location.search).get('room') || '').toUpperCase().slice(0, 5);
 const net = new Net();
-$('#joinBtn').onclick = async () => {
-  $('#joinBtn').disabled = true; $('#selErr').textContent = 'Connecting…';
-  const serverUrl = normalizeServerUrl(serverEl.value);
+const lobbyBtns = ['#soloBtn', '#hostBtn', '#joinBtn'].map((q) => $(q));
+async function enter(mode) {
+  const code = mode === 'host' ? makeCode() : codeEl.value.trim().toUpperCase();
+  if (mode === 'join' && !code) { $('#selErr').textContent = 'Type the room code your friend gave you.'; return; }
+  lobbyBtns.forEach((b) => (b.disabled = true));
+  $('#selErr').textContent = mode === 'solo' ? '' : 'Connecting…';
   try {
-    await net.connect(serverUrl);
-    localStorage.setItem('em_name', nameEl.value);
-    try { if (serverUrl) localStorage.setItem('em_server', serverUrl); else localStorage.removeItem('em_server'); } catch {}
+    if (mode === 'solo') await net.solo(); else if (mode === 'host') await net.host(code); else await net.join(code);
+    try { localStorage.setItem('em_name', nameEl.value); } catch {}
+    if (net.code) history.replaceState(null, '', '?room=' + net.code);
+    $('#selErr').textContent = '';
     net.send({ t: 'join', name: nameEl.value, char: selectedChar });
-  } catch {
-    $('#selErr').textContent = serverUrl ? `Could not reach ${serverUrl}` : 'Could not connect to the game server.'; $('#joinBtn').disabled = false;
+  } catch (e) {
+    $('#selErr').textContent = e.message || 'Could not connect.';
+    lobbyBtns.forEach((b) => (b.disabled = false));
   }
-};
-net.onClose = () => { if (phase === 'game') { feed('Disconnected from server — reload to rejoin'); phase = 'dead'; } };
+}
+$('#soloBtn').onclick = () => enter('solo');
+$('#hostBtn').onclick = () => enter('host');
+$('#joinBtn').onclick = () => enter('join');
+codeEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') enter('join'); });
+net.onClose = () => { if (phase === 'game') { feed('The host closed the heist — reload to rejoin'); phase = 'dead'; } };
 
 // ------------------------------------------------------------------ game state
 const store = buildStore(scene);
@@ -389,6 +399,12 @@ function startGame() {
   phase = 'game';
   $('#select').style.display = 'none';
   $('#hud').style.display = 'block';
+  if (net.code) {
+    const link = location.origin + location.pathname + '?room=' + net.code;
+    $('#room').style.display = '';
+    $('#room').innerHTML = `ROOM <b>${net.code}</b> <button id="copyLink">COPY INVITE</button>`;
+    $('#copyLink').onclick = () => { navigator.clipboard?.writeText(link).then(() => feed('Invite link copied!', 'info'), () => {}); };
+  }
   yaw = me.rot; // look the way we spawn facing
   camera.position.set(me.x, 3, me.z + 5);
   feed('The store is closed and the alarm is off. Grab a cart (E), swipe loot (F), bring it back to the truck!', 'info');

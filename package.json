@@ -1,16 +1,11 @@
 {
-  "name": "electro-mart",
+  "name": "electro-mart-heist",
   "version": "1.0.0",
-  "description": "N64-style multiplayer shopping cart chaos in an electronics store (Three.js + cannon-es + ws)",
+  "description": "N64-style co-op shopping cart heist in an electronics store (Three.js + cannon-es + PeerJS)",
+  "private": true,
   "type": "module",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {
-    "ws": "^8.18.0"
-  },
-  "engines": {
-    "node": ">=18"
+    "start": "python -m http.server 5220 --directory public",
+    "test": "node --test test/sim-test.mjs"
   }
 }
